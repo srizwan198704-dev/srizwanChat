@@ -1,39 +1,143 @@
 <!DOCTYPE html>
-<html>
+<html lang="bn">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Anon Chat</title>
+<title>Modern Anon Chat</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
-body{
-  margin:0;
-  font-family:sans-serif;
-  background:#111;
-  color:#fff;
+:root {
+  --bg-color: #0f172a;
+  --card-bg: #1e293b;
+  --my-msg: #3b82f6;
+  --other-msg: #334155;
+  --text-main: #f8fafc;
+  --accent: #60a5fa;
 }
-#msg{
-  height:80vh;
-  overflow:auto;
-  padding:5px;
+
+body {
+  margin: 0;
+  font-family: 'Hind Siliguri', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
-.me{color:#4fc3f7;}
-.other{color:#fff;}
-#box{display:flex;}
-input{flex:1;padding:8px;font-size:16px;}
-button{padding:8px;background:#4fc3f7;border:none;}
-#status{font-size:12px;color:#aaa;padding:5px;}
+
+/* Header/Status Area */
+#status-bar {
+  padding: 15px;
+  background: var(--card-bg);
+  text-align: center;
+  font-size: 14px;
+  border-bottom: 1px solid #334155;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Chat Messages Area */
+#msg-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Bubble Styling */
+.message {
+  max-width: 75%;
+  padding: 10px 15px;
+  border-radius: 18px;
+  font-size: 16px;
+  line-height: 1.5;
+  position: relative;
+  word-wrap: break-word;
+}
+
+.me {
+  align-self: flex-end;
+  background-color: var(--my-msg);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.other {
+  align-self: flex-start;
+  background-color: var(--other-msg);
+  color: var(--text-main);
+  border-bottom-left-radius: 4px;
+}
+
+.user-name {
+  font-size: 11px;
+  margin-bottom: 4px;
+  display: block;
+  opacity: 0.8;
+}
+
+/* Input Area */
+#input-box {
+  padding: 15px;
+  background: var(--card-bg);
+  display: flex;
+  gap: 10px;
+  border-top: 1px solid #334155;
+}
+
+input {
+  flex: 1;
+  padding: 12px 18px;
+  border-radius: 25px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: white;
+  outline: none;
+  font-family: inherit;
+}
+
+input:focus {
+  border-color: var(--accent);
+}
+
+button {
+  background: var(--my-msg);
+  color: white;
+  border: none;
+  padding: 0 20px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #2563eb;
+}
+
+/* Custom Scrollbar */
+#msg-container::-webkit-scrollbar {
+  width: 5px;
+}
+#msg-container::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}
 </style>
 </head>
 
 <body>
 
-<div id="msg"></div>
-<div id="status">Connecting...</div>
+<div id="status-bar">Connecting...</div>
+<div id="msg-container"></div>
 
-<div id="box">
-<input id="input" placeholder="message...">
-<button onclick="send()">Send</button>
+<div id="input-box">
+  <input id="input" placeholder="আপনার বার্তা লিখুন..." autocomplete="off">
+  <button onclick="send()">পাঠান</button>
 </div>
 
 <script type="module">
@@ -41,7 +145,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/fireba
 import { getDatabase, ref, push, onChildAdded, update, set, onValue, onDisconnect } 
 from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
-//   Firebase config (already correct)
 const firebaseConfig = {
   apiKey: "AIzaSyDqjbhRTpFgwRtZrqCG-ckO-UM_uZqh2Rc",
   authDomain: "srizwanchat.firebaseapp.com",
@@ -59,62 +162,69 @@ const chatRef = ref(db, "chat");
 const onlineRef = ref(db, "online");
 const typingRef = ref(db, "typing");
 
-// user
-const user = "User" + Math.floor(Math.random()*9999);
+const user = "User-" + Math.floor(Math.random()*9999);
 
-// online system
+// Online System
 set(ref(db, "online/" + user), true);
 onDisconnect(ref(db, "online/" + user)).remove();
 
-onValue(onlineRef, snap=>{
-  document.getElementById("status").innerText =
-    snap.size + " online";
+onValue(onlineRef, snap => {
+  document.getElementById("status-bar").innerText = (snap.size || 0) + " জন অনলাইনে আছেন";
 });
 
-// send message
-window.send = function(){
+// Send Message
+window.send = function() {
   let input = document.getElementById("input");
   let text = input.value.trim();
   if(!text) return;
 
   push(chatRef, {
-    name:user,
-    msg:text,
-    seen:false,
-    time:Date.now()
+    name: user,
+    msg: text,
+    time: Date.now()
   });
 
-  input.value="";
+  input.value = "";
 };
 
-// typing
-document.getElementById("input").addEventListener("input", ()=>{
-  set(typingRef, user + " typing...");
-  setTimeout(()=>set(typingRef, ""),1000);
+// Enter key support
+document.getElementById("input").addEventListener("keypress", (e) => {
+  if (e.key === "Enter") send();
 });
 
-onValue(typingRef, snap=>{
-  if(snap.val()){
-    document.getElementById("status").innerText = snap.val();
+// Typing Indicator
+let typingTimeout;
+document.getElementById("input").addEventListener("input", () => {
+  set(typingRef, user + " লিখছেন...");
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => set(typingRef, ""), 2000);
+});
+
+onValue(typingRef, snap => {
+  let val = snap.val();
+  if(val && !val.includes(user)) {
+    document.getElementById("status-bar").innerText = val;
   }
 });
 
-// receive message
-onChildAdded(chatRef, snap=>{
+// Receive Message
+onChildAdded(chatRef, snap => {
   let d = snap.val();
+  let container = document.getElementById("msg-container");
   let div = document.createElement("div");
 
-  div.className = (d.name==user) ? "me" : "other";
+  const isMe = d.name === user;
+  div.className = `message ${isMe ? 'me' : 'other'}`;
 
-  div.innerHTML = "<b>"+d.name+":</b> " + d.msg;
+  div.innerHTML = `
+    <span class="user-name">${isMe ? 'আপনি' : d.name}</span>
+    <div class="text">${d.msg}</div>
+  `;
 
-  document.getElementById("msg").appendChild(div);
-  window.scrollTo(0,99999);
-
-  // seen update
-  if(d.name !== user){
-    update(snap.ref, {seen:true});
-  }
+  container.appendChild(div);
+  
+  // Auto Scroll to bottom
+  container.scrollTop = container.scrollHeight;
 });
 </script>
 
