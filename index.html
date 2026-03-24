@@ -2,10 +2,11 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Modern Anon Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Private Duo Chat</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
 <style>
 :root {
@@ -25,124 +26,122 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  overflow: hidden;
 }
 
-/* Header/Status Area */
 #status-bar {
-  padding: 15px;
+  padding: 10px;
   background: var(--card-bg);
   text-align: center;
-  font-size: 14px;
+  font-size: 12px;
   border-bottom: 1px solid #334155;
   color: var(--accent);
-  font-weight: 600;
+  letter-spacing: 1px;
 }
 
-/* Chat Messages Area */
 #msg-container {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 15px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  scroll-behavior: smooth;
 }
 
-/* Bubble Styling */
 .message {
   max-width: 75%;
-  padding: 10px 15px;
+  padding: 10px 14px;
   border-radius: 18px;
-  font-size: 16px;
-  line-height: 1.5;
-  position: relative;
+  font-size: 15px;
   word-wrap: break-word;
+  line-height: 1.4;
 }
 
-.me {
-  align-self: flex-end;
-  background-color: var(--my-msg);
-  color: white;
-  border-bottom-right-radius: 4px;
+/* Side by Side Logic */
+.me { 
+  align-self: flex-end; 
+  background: var(--my-msg); 
+  color: white; 
+  border-bottom-right-radius: 2px;
 }
 
-.other {
-  align-self: flex-start;
-  background-color: var(--other-msg);
-  color: var(--text-main);
-  border-bottom-left-radius: 4px;
+.other { 
+  align-self: flex-start; 
+  background: var(--other-msg); 
+  color: white; 
+  border-bottom-left-radius: 2px;
 }
 
-.user-name {
-  font-size: 11px;
-  margin-bottom: 4px;
-  display: block;
-  opacity: 0.8;
+/* Big Emoji Style */
+.big-emoji { 
+  font-size: 60px; 
+  background: transparent !important; 
+  padding: 0 !important; 
+  align-self: center; /* ржмрзЬ ржЗржорзЛржЬрж┐ ржорж╛ржЭржЦрж╛ржирзЗ ржжрзЗржЦрж╛рж▓рзЗ рж╕рзБржирзНржжрж░ рж▓рж╛ржЧрзЗ */
 }
+.me.big-emoji { align-self: flex-end; }
+.other.big-emoji { align-self: flex-start; }
 
-/* Input Area */
 #input-box {
-  padding: 15px;
+  padding: 12px;
   background: var(--card-bg);
   display: flex;
+  align-items: center;
   gap: 10px;
-  border-top: 1px solid #334155;
+  padding-bottom: env(safe-area-inset-bottom); /* iOS support */
 }
 
-input {
+#input {
   flex: 1;
   padding: 12px 18px;
   border-radius: 25px;
-  border: 1px solid #334155;
+  border: none;
   background: #0f172a;
   color: white;
   outline: none;
-  font-family: inherit;
+  font-size: 16px;
 }
 
-input:focus {
-  border-color: var(--accent);
-}
-
-button {
-  background: var(--my-msg);
-  color: white;
+#action-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
   border: none;
-  padding: 0 20px;
-  border-radius: 25px;
+  background: transparent;
+  color: var(--my-msg);
   cursor: pointer;
-  font-weight: 600;
-  transition: 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-button:hover {
-  background: #2563eb;
-}
+.material-icons { font-size: 30px; }
+.emoji-btn { font-size: 28px; transition: 0.2s; }
+#action-btn:active .emoji-btn { transform: scale(1.3); }
 
-/* Custom Scrollbar */
-#msg-container::-webkit-scrollbar {
-  width: 5px;
-}
-#msg-container::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 10px;
-}
+#msg-container::-webkit-scrollbar { width: 3px; }
+#msg-container::-webkit-scrollbar-thumb { background: #334155; }
 </style>
 </head>
 
 <body>
 
-<div id="status-bar">Connecting...</div>
+<div id="status-bar">ржЕржмрж╕рзНржерж╛ ржкрж░рзАржХрзНрж╖рж╛ ржХрж░рж╛ рж╣ржЪрзНржЫрзЗ...</div>
 <div id="msg-container"></div>
 
 <div id="input-box">
-  <input id="input" placeholder="আপনার বার্তা লিখুন..." autocomplete="off">
-  <button onclick="send()">পাঠান</button>
+  <input id="input" placeholder="ржХрж┐ржЫрзБ рж▓рж┐ржЦрзБржи..." autocomplete="off">
+  <button id="action-btn" onmousedown="startPress()" onmouseup="endPress()" ontouchstart="startPress()" ontouchend="endPress()">
+    <span class="emoji-btn">ЁЯТЛ</span>
+  </button>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded, update, set, onValue, onDisconnect } 
+import { getDatabase, ref, push, onChildAdded, set, onValue, onDisconnect } 
 from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -157,73 +156,89 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-
 const chatRef = ref(db, "chat");
 const onlineRef = ref(db, "online");
-const typingRef = ref(db, "typing");
 
-const user = "User-" + Math.floor(Math.random()*9999);
+// --- Device/User ID Logic ---
+// ржПржЯрж┐ ржЖржкржирж╛рж░ ржбрж┐ржнрж╛ржЗрж╕ ржЖржЗржбрж┐ рж╕рзЗржн ржХрж░рзЗ рж░рж╛ржЦржмрзЗ ржпрж╛рждрзЗ рж░рж┐ржлрзНрж░рзЗрж╢ ржХрж░рж▓рзЗ рж╕рж╛ржЗржб ржкрж░рж┐ржмрж░рзНрждржи ржирж╛ рж╣рзЯ
+let myId = localStorage.getItem("chat_user_id");
+if (!myId) {
+  myId = "UID-" + Math.random().toString(36).substr(2, 9);
+  localStorage.setItem("chat_user_id", myId);
+}
 
-// Online System
-set(ref(db, "online/" + user), true);
-onDisconnect(ref(db, "online/" + user)).remove();
-
+// Online Tracking
+set(ref(db, "online/" + myId), true);
+onDisconnect(ref(db, "online/" + myId)).remove();
 onValue(onlineRef, snap => {
-  document.getElementById("status-bar").innerText = (snap.size || 0) + " জন অনলাইনে আছেন";
+  const count = snap.size || 0;
+  document.getElementById("status-bar").innerText = count === 2 ? "ЁЯЯв ржжрзБржЗржЬржиржЗ ржЕржирж▓рж╛ржЗржирзЗ ржЖржЫрзЗржи" : "ЁЯЯб рзз ржЬржи ржЕржирж▓рж╛ржЗржи";
 });
 
-// Send Message
-window.send = function() {
-  let input = document.getElementById("input");
-  let text = input.value.trim();
-  if(!text) return;
+const input = document.getElementById("input");
+const btn = document.getElementById("action-btn");
 
-  push(chatRef, {
-    name: user,
-    msg: text,
-    time: Date.now()
-  });
+// Input UI change
+input.addEventListener("input", () => {
+  btn.innerHTML = input.value.trim() !== "" 
+    ? '<span class="material-icons">send</span>' 
+    : '<span class="emoji-btn">ЁЯТЛ</span>';
+});
 
-  input.value = "";
+// Long Press Logic for Big ЁЯТЛ
+let pressTimer;
+let isLongPress = false;
+
+window.startPress = function(e) {
+  if(input.value.trim() !== "") return;
+  isLongPress = false;
+  pressTimer = setTimeout(() => {
+    isLongPress = true;
+    sendMsg("ЁЯТЛ", true);
+  }, 800); // рзорзжрзж ржорж┐рж▓рж┐рж╕рзЗржХрзЗржирзНржб ржЪрж╛ржкрж▓рзЗ ржмрзЬ рж╣ржмрзЗ
 };
 
-// Enter key support
-document.getElementById("input").addEventListener("keypress", (e) => {
-  if (e.key === "Enter") send();
-});
-
-// Typing Indicator
-let typingTimeout;
-document.getElementById("input").addEventListener("input", () => {
-  set(typingRef, user + " লিখছেন...");
-  clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(() => set(typingRef, ""), 2000);
-});
-
-onValue(typingRef, snap => {
-  let val = snap.val();
-  if(val && !val.includes(user)) {
-    document.getElementById("status-bar").innerText = val;
+window.endPress = function() {
+  clearTimeout(pressTimer);
+  if(input.value.trim() !== "") {
+    sendMsg(input.value, false);
+  } else if(!isLongPress) {
+    sendMsg("ЁЯТЛ", false);
   }
+};
+
+function sendMsg(text, isBig) {
+  if(!text.trim()) return;
+  push(chatRef, {
+    sender: myId,
+    msg: text,
+    big: isBig,
+    time: Date.now()
+  });
+  input.value = "";
+  btn.innerHTML = '<span class="emoji-btn">ЁЯТЛ</span>';
+}
+
+// Enter Key Support
+input.addEventListener("keypress", (e) => { 
+  if(e.key === "Enter") sendMsg(input.value, false); 
 });
 
-// Receive Message
+// Receive & Display Messages
 onChildAdded(chatRef, snap => {
-  let d = snap.val();
-  let container = document.getElementById("msg-container");
-  let div = document.createElement("div");
+  const d = snap.val();
+  const container = document.getElementById("msg-container");
+  const div = document.createElement("div");
+  
+  // ржЪрзЗржХ ржХрж░рж╛ рж╣ржЪрзНржЫрзЗ ржорзЗрж╕рзЗржЬржЯрж┐ ржХрж┐ ржПржЗ ржбрж┐ржнрж╛ржЗрж╕рзЗрж░ ржирж╛ржХрж┐ ржЕржирзНржп ржХрж╛рж░рзЛ
+  const isMe = d.sender === myId;
 
-  const isMe = d.name === user;
-  div.className = `message ${isMe ? 'me' : 'other'}`;
-
-  div.innerHTML = `
-    <span class="user-name">${isMe ? 'আপনি' : d.name}</span>
-    <div class="text">${d.msg}</div>
-  `;
+  div.className = `message ${isMe ? 'me' : 'other'} ${d.big ? 'big-emoji' : ''}`;
+  div.innerHTML = `<div class="text">${d.msg}</div>`;
 
   container.appendChild(div);
   
-  // Auto Scroll to bottom
+  // рж╕рзНржХрзНрж░рж▓ рж╕ржмрж╕ржорзЯ ржирж┐ржЪрзЗ рж░рж╛ржЦрж╛
   container.scrollTop = container.scrollHeight;
 });
 </script>
