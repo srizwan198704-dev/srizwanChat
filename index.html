@@ -70,13 +70,20 @@ body {
   padding: 15px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 5px; /* গ্যাপ কমানো হয়েছে যাতে সময় মেসেজের কাছে থাকে */
   -webkit-overflow-scrolling: touch;
 }
 
 @keyframes slideInUp {
-  from { transform: translateY(20px); opacity: 0; }
+  from { transform: translateY(10px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+.message-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  animation: slideInUp 0.3s ease-out;
 }
 
 .message {
@@ -86,13 +93,30 @@ body {
   font-size: 17px;
   word-wrap: break-word;
   line-height: 1.5;
-  animation: slideInUp 0.3s ease-out;
+  cursor: pointer;
+  user-select: none;
 }
 
 .me { align-self: flex-end; background: var(--my-msg); color: #000; border-bottom-right-radius: 2px;}
 .other { align-self: flex-start; background: var(--other-msg); color: #fff; border-bottom-left-radius: 2px;}
 
 .big-emoji { font-size: 65px; background: transparent !important; padding: 0 !important; }
+
+/* সময় দেখানোর স্টাইল */
+.time-stamp {
+  font-size: 11px;
+  color: var(--accent);
+  margin-top: 2px;
+  margin-bottom: 8px;
+  display: none; /* শুরুতে লুকানো থাকবে */
+  animation: slideInUp 0.2s ease-out;
+}
+
+.me-time { align-self: flex-end; margin-right: 5px; }
+.other-time { align-self: flex-start; margin-left: 5px; }
+
+/* ক্লিক করলে দেখানোর জন্য ক্লাস */
+.show-time { display: block; }
 
 #input-box {
   display: flex;
@@ -126,7 +150,6 @@ body {
   align-items: center;
   justify-content: center;
   min-width: 45px;
-  user-select: none;
 }
 
 .emoji-btn {
@@ -157,7 +180,7 @@ body {
 <div id="msg-container"></div>
 
 <div id="input-box">
-  <input id="input" placeholder="বার্তা লিখুন..." autocomplete="off">
+  <input id="input" placeholder="মেসেজ..." autocomplete="off">
   <button id="action-btn">
     <span class="emoji-btn" id="emoji-icon">💋</span>
   </button>
@@ -186,7 +209,6 @@ const onlineRef = ref(db, "online");
 let myId = localStorage.getItem("chat_user_id") || "U-" + Math.floor(Math.random()*9999);
 localStorage.setItem("chat_user_id", myId);
 
-// কানেক্টিভিটি চেক
 const connectedRef = ref(db, ".info/connected");
 onValue(connectedRef, (snap) => {
   if (snap.val() === true) {
@@ -199,6 +221,20 @@ onValue(connectedRef, (snap) => {
 function toBanglaNum(num) {
   const bNum = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
   return num.toString().split('').map(d => bNum[d] || d).join('');
+}
+
+// সময় ফরম্যাট করার ফাংশন
+function formatTime(timestamp) {
+  const date = new Date(timestamp);
+  let hours = date.getHours();
+  let minutes = date.getMinutes();
+  const ampm = hours >= 12 ? 'পিএম' : 'এএম';
+  hours = hours % 12;
+  hours = hours ? hours : 12; 
+  minutes = minutes < 10 ? '0'+minutes : minutes;
+  const strTime = toBanglaNum(hours) + ':' + toBanglaNum(minutes) + ' ' + ampm;
+  const strDate = toBanglaNum(date.getDate()) + '/' + toBanglaNum(date.getMonth() + 1);
+  return strDate + ' • ' + strTime;
 }
 
 onValue(onlineRef, snap => {
@@ -282,24 +318,35 @@ input.addEventListener("keypress", (e) => { if(e.key === "Enter") sendMsg(input.
 
 onChildAdded(chatRef, snap => {
   const d = snap.val();
-  const div = document.createElement("div");
   const isMe = d.sender === myId;
+  
+  const wrapper = document.createElement("div");
+  wrapper.className = "message-wrapper";
+  
+  const div = document.createElement("div");
   div.className = `message ${isMe ? 'me' : 'other'} ${d.big ? 'big-emoji' : ''}`;
   div.innerHTML = `<div class="text">${d.msg}</div>`;
-  container.appendChild(div);
+  
+  const timeDiv = document.createElement("div");
+  timeDiv.className = `time-stamp ${isMe ? 'me-time' : 'other-time'}`;
+  timeDiv.innerText = formatTime(d.time);
+  
+  // ক্লিকে সময় দেখানো/লুকানোর লজিক
+  div.addEventListener('click', () => {
+    timeDiv.classList.toggle('show-time');
+  });
+  
+  wrapper.appendChild(div);
+  wrapper.appendChild(timeDiv);
+  container.appendChild(wrapper);
   container.scrollTop = container.scrollHeight;
 });
 
 onValue(chatRef, snap => { if(!snap.exists()) container.innerHTML = ""; });
 
-// --- Service Worker Registration for PWA ---
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then(reg => {
-      console.log('Service Worker Registered!');
-    }).catch(err => {
-      console.log('Registration Failed!', err);
-    });
+    navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
 </script>
