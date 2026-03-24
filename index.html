@@ -10,12 +10,11 @@
 
 <style>
 :root {
-  --bg-color: #0f172a;
-  --card-bg: #1e293b;
-  --my-msg: #3b82f6;
-  --other-msg: #334155;
-  --text-main: #f8fafc;
-  --accent: #60a5fa;
+  --bg-color: #111;
+  --my-msg: #4fc3f7;
+  --other-msg: #333;
+  --text-main: #fff;
+  --accent: #aaa;
 }
 
 body {
@@ -29,113 +28,88 @@ body {
   overflow: hidden;
 }
 
-#status-bar {
-  padding: 10px;
-  background: var(--card-bg);
-  text-align: center;
+#status {
   font-size: 12px;
-  border-bottom: 1px solid #334155;
   color: var(--accent);
-  letter-spacing: 1px;
+  padding: 8px;
+  text-align: center;
+  background: rgba(255,255,255,0.05);
 }
 
 #msg-container {
   flex: 1;
   overflow-y: auto;
-  padding: 15px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  scroll-behavior: smooth;
 }
 
 .message {
   max-width: 75%;
-  padding: 10px 14px;
-  border-radius: 18px;
-  font-size: 15px;
+  padding: 8px 12px;
+  border-radius: 15px;
+  font-size: 16px;
   word-wrap: break-word;
-  line-height: 1.4;
 }
 
-/* Side by Side Logic */
-.me { 
-  align-self: flex-end; 
-  background: var(--my-msg); 
-  color: white; 
-  border-bottom-right-radius: 2px;
-}
+.me { align-self: flex-end; background: var(--my-msg); color: #000; border-bottom-right-radius: 2px;}
+.other { align-self: flex-start; background: var(--other-msg); color: #fff; border-bottom-left-radius: 2px;}
 
-.other { 
-  align-self: flex-start; 
-  background: var(--other-msg); 
-  color: white; 
-  border-bottom-left-radius: 2px;
-}
-
-/* Big Emoji Style */
-.big-emoji { 
-  font-size: 60px; 
-  background: transparent !important; 
-  padding: 0 !important; 
-  align-self: center; /* ржмрзЬ ржЗржорзЛржЬрж┐ ржорж╛ржЭржЦрж╛ржирзЗ ржжрзЗржЦрж╛рж▓рзЗ рж╕рзБржирзНржжрж░ рж▓рж╛ржЧрзЗ */
-}
-.me.big-emoji { align-self: flex-end; }
-.other.big-emoji { align-self: flex-start; }
+.big-emoji { font-size: 60px; background: transparent !important; padding: 0 !important; }
 
 #input-box {
-  padding: 12px;
-  background: var(--card-bg);
   display: flex;
+  padding: 10px;
+  background: #111;
   align-items: center;
-  gap: 10px;
-  padding-bottom: env(safe-area-inset-bottom); /* iOS support */
+  gap: 8px;
+  border-top: 1px solid #222;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 #input {
   flex: 1;
-  padding: 12px 18px;
-  border-radius: 25px;
-  border: none;
-  background: #0f172a;
-  color: white;
+  padding: 10px 15px;
+  border-radius: 20px;
+  border: 1px solid #333;
+  background: #222;
+  color: #fff;
   outline: none;
   font-size: 16px;
 }
 
 #action-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: none;
   background: transparent;
+  border: none;
   color: var(--my-msg);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 45px;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
 .material-icons { font-size: 30px; }
-.emoji-btn { font-size: 28px; transition: 0.2s; }
-#action-btn:active .emoji-btn { transform: scale(1.3); }
-
-#msg-container::-webkit-scrollbar { width: 3px; }
-#msg-container::-webkit-scrollbar-thumb { background: #334155; }
+.emoji-btn { font-size: 28px; }
 </style>
 </head>
 
 <body>
 
-<div id="status-bar">ржЕржмрж╕рзНржерж╛ ржкрж░рзАржХрзНрж╖рж╛ ржХрж░рж╛ рж╣ржЪрзНржЫрзЗ...</div>
+<div id="status">Connecting...</div>
 <div id="msg-container"></div>
 
 <div id="input-box">
-  <input id="input" placeholder="ржХрж┐ржЫрзБ рж▓рж┐ржЦрзБржи..." autocomplete="off">
-  <button id="action-btn" onmousedown="startPress()" onmouseup="endPress()" ontouchstart="startPress()" ontouchend="endPress()">
-    <span class="emoji-btn">ЁЯТЛ</span>
+  <input id="input" placeholder="message..." autocomplete="off">
+  <button id="action-btn" 
+    onmousedown="startPress()" 
+    onmouseup="endPress()" 
+    ontouchstart="startPress()" 
+    ontouchend="endPress()">
+    <span class="emoji-btn">💋</span>
   </button>
 </div>
 
@@ -159,56 +133,54 @@ const db = getDatabase(app);
 const chatRef = ref(db, "chat");
 const onlineRef = ref(db, "online");
 
-// --- Device/User ID Logic ---
-// ржПржЯрж┐ ржЖржкржирж╛рж░ ржбрж┐ржнрж╛ржЗрж╕ ржЖржЗржбрж┐ рж╕рзЗржн ржХрж░рзЗ рж░рж╛ржЦржмрзЗ ржпрж╛рждрзЗ рж░рж┐ржлрзНрж░рзЗрж╢ ржХрж░рж▓рзЗ рж╕рж╛ржЗржб ржкрж░рж┐ржмрж░рзНрждржи ржирж╛ рж╣рзЯ
-let myId = localStorage.getItem("chat_user_id");
-if (!myId) {
-  myId = "UID-" + Math.random().toString(36).substr(2, 9);
-  localStorage.setItem("chat_user_id", myId);
-}
+let myId = localStorage.getItem("chat_user_id") || "U-" + Math.floor(Math.random()*9999);
+localStorage.setItem("chat_user_id", myId);
 
-// Online Tracking
 set(ref(db, "online/" + myId), true);
 onDisconnect(ref(db, "online/" + myId)).remove();
 onValue(onlineRef, snap => {
-  const count = snap.size || 0;
-  document.getElementById("status-bar").innerText = count === 2 ? "ЁЯЯв ржжрзБржЗржЬржиржЗ ржЕржирж▓рж╛ржЗржирзЗ ржЖржЫрзЗржи" : "ЁЯЯб рзз ржЬржи ржЕржирж▓рж╛ржЗржи";
+  document.getElementById("status").innerText = (snap.size || 0) + " online";
 });
 
 const input = document.getElementById("input");
 const btn = document.getElementById("action-btn");
 
-// Input UI change
+// আইকন পরিবর্তন লজিক
 input.addEventListener("input", () => {
-  btn.innerHTML = input.value.trim() !== "" 
-    ? '<span class="material-icons">send</span>' 
-    : '<span class="emoji-btn">ЁЯТЛ</span>';
+  if (input.value.trim() !== "") {
+    btn.innerHTML = '<span class="material-icons">send</span>';
+  } else {
+    btn.innerHTML = '<span class="emoji-btn">💋</span>';
+  }
 });
 
-// Long Press Logic for Big ЁЯТЛ
 let pressTimer;
 let isLongPress = false;
 
-window.startPress = function(e) {
-  if(input.value.trim() !== "") return;
+window.startPress = function() {
+  if(input.value.trim() !== "") return; // টাইপ করলে লং প্রেস কাজ করবে না
   isLongPress = false;
   pressTimer = setTimeout(() => {
     isLongPress = true;
-    sendMsg("ЁЯТЛ", true);
-  }, 800); // рзорзжрзж ржорж┐рж▓рж┐рж╕рзЗржХрзЗржирзНржб ржЪрж╛ржкрж▓рзЗ ржмрзЬ рж╣ржмрзЗ
+    sendMsg("💋", true);
+  }, 800);
 };
 
 window.endPress = function() {
   clearTimeout(pressTimer);
-  if(input.value.trim() !== "") {
-    sendMsg(input.value, false);
-  } else if(!isLongPress) {
-    sendMsg("ЁЯТЛ", false);
+  const text = input.value.trim();
+  
+  if (text !== "") {
+    // যদি বক্সে লেখা থাকে তবে শুধু লেখা যাবে
+    sendMsg(text, false);
+  } else if (!isLongPress) {
+    // যদি লেখা না থাকে এবং লং প্রেস না হয়ে থাকে তবে ছোট ইমোজি যাবে
+    sendMsg("💋", false);
   }
 };
 
 function sendMsg(text, isBig) {
-  if(!text.trim()) return;
+  if(!text) return;
   push(chatRef, {
     sender: myId,
     msg: text,
@@ -216,29 +188,21 @@ function sendMsg(text, isBig) {
     time: Date.now()
   });
   input.value = "";
-  btn.innerHTML = '<span class="emoji-btn">ЁЯТЛ</span>';
+  btn.innerHTML = '<span class="emoji-btn">💋</span>';
 }
 
-// Enter Key Support
-input.addEventListener("keypress", (e) => { 
-  if(e.key === "Enter") sendMsg(input.value, false); 
-});
+input.addEventListener("keypress", (e) => { if(e.key === "Enter") sendMsg(input.value.trim(), false); });
 
-// Receive & Display Messages
 onChildAdded(chatRef, snap => {
   const d = snap.val();
   const container = document.getElementById("msg-container");
   const div = document.createElement("div");
-  
-  // ржЪрзЗржХ ржХрж░рж╛ рж╣ржЪрзНржЫрзЗ ржорзЗрж╕рзЗржЬржЯрж┐ ржХрж┐ ржПржЗ ржбрж┐ржнрж╛ржЗрж╕рзЗрж░ ржирж╛ржХрж┐ ржЕржирзНржп ржХрж╛рж░рзЛ
   const isMe = d.sender === myId;
 
   div.className = `message ${isMe ? 'me' : 'other'} ${d.big ? 'big-emoji' : ''}`;
   div.innerHTML = `<div class="text">${d.msg}</div>`;
 
   container.appendChild(div);
-  
-  // рж╕рзНржХрзНрж░рж▓ рж╕ржмрж╕ржорзЯ ржирж┐ржЪрзЗ рж░рж╛ржЦрж╛
   container.scrollTop = container.scrollHeight;
 });
 </script>
