@@ -2,7 +2,7 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>ব্যক্তিগত চ্যাট</title>
 
 <link href="https://fonts.maateen.me/solaiman-lipi/font.css" rel="stylesheet">
@@ -18,24 +18,32 @@
   --font-main: 'SolaimanLipi', sans-serif;
 }
 
-body {
+html, body {
+  height: 100%;
   margin: 0;
-  font-family: var(--font-main);
+  padding: 0;
+  overflow: hidden;
   background-color: var(--bg-color);
+}
+
+body {
+  font-family: var(--font-main);
   color: var(--text-main);
   display: flex;
   flex-direction: column;
-  height: 100dvh;
-  overflow: hidden;
+  /* আধুনিক ব্রাউজারের জন্য ডাইনামিক হাইট */
+  height: 100vh;
+  height: -webkit-fill-available;
 }
 
 #header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 15px;
+  padding: 10px 15px;
   background: rgba(255,255,255,0.05);
   border-bottom: 1px solid #222;
+  flex-shrink: 0; /* হেডার যেন ছোট না হয়ে যায় */
 }
 
 #status {
@@ -43,7 +51,6 @@ body {
   color: var(--accent);
   flex: 1;
   text-align: center;
-  font-family: var(--font-main);
 }
 
 .delete-btn {
@@ -62,6 +69,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* কীবোর্ড আসলে স্ক্রল স্মুথ রাখার জন্য */
+  -webkit-overflow-scrolling: touch;
 }
 
 .message {
@@ -70,7 +79,6 @@ body {
   border-radius: 18px;
   font-size: 17px;
   word-wrap: break-word;
-  font-family: var(--font-main);
   line-height: 1.5;
 }
 
@@ -81,11 +89,13 @@ body {
 
 #input-box {
   display: flex;
-  padding: 12px 15px 25px 15px;
+  padding: 12px 15px;
   background: #111;
   align-items: center;
   gap: 10px;
   border-top: 1px solid #222;
+  flex-shrink: 0;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
 }
 
 #input {
@@ -109,8 +119,6 @@ body {
   align-items: center;
   justify-content: center;
   min-width: 45px;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .material-icons { font-size: 30px; }
@@ -176,6 +184,15 @@ onValue(onlineRef, snap => {
 
 const input = document.getElementById("input");
 const btn = document.getElementById("action-btn");
+const container = document.getElementById("msg-container");
+
+// কীবোর্ড ফিক্স করার মূল লজিক
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    document.body.style.height = window.visualViewport.height + 'px';
+    container.scrollTop = container.scrollHeight;
+  });
+}
 
 input.addEventListener("input", () => {
   btn.innerHTML = input.value.trim() !== "" ? '<span class="material-icons">send</span>' : '<span class="emoji-btn">💋</span>';
@@ -186,7 +203,7 @@ let isLongPress = false;
 let isActionFired = false;
 
 const handleStart = (e) => {
-  if (e.type === 'touchstart') e.preventDefault(); 
+  if (e.type === 'touchstart' && e.cancelable) e.preventDefault(); 
   isActionFired = false;
   if(input.value.trim() !== "") return;
   
@@ -199,7 +216,7 @@ const handleStart = (e) => {
 };
 
 const handleEnd = (e) => {
-  if (e.type === 'touchend') e.preventDefault();
+  if (e.type === 'touchend' && e.cancelable) e.preventDefault();
   clearTimeout(pressTimer);
   
   if (isActionFired) return;
@@ -227,9 +244,16 @@ function sendMsg(text, isBig) {
   push(chatRef, { sender: myId, msg: text, big: isBig, time: Date.now() });
   input.value = "";
   btn.innerHTML = '<span class="emoji-btn">💋</span>';
+  // মেসেজ পাঠানোর পর অটো নিচে স্ক্রল
+  setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
 }
 
-input.addEventListener("keypress", (e) => { if(e.key === "Enter") sendMsg(input.value.trim(), false); });
+input.addEventListener("keypress", (e) => { 
+    if(e.key === "Enter") {
+        sendMsg(input.value.trim(), false); 
+        input.blur(); // মেসেজ পাঠিয়ে কীবোর্ড হাইড করতে চাইলে এটি রাখতে পারেন
+    }
+});
 
 onChildAdded(chatRef, snap => {
   const d = snap.val();
@@ -237,12 +261,11 @@ onChildAdded(chatRef, snap => {
   const isMe = d.sender === myId;
   div.className = `message ${isMe ? 'me' : 'other'} ${d.big ? 'big-emoji' : ''}`;
   div.innerHTML = `<div class="text">${d.msg}</div>`;
-  const container = document.getElementById("msg-container");
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
 });
 
-onValue(chatRef, snap => { if(!snap.exists()) document.getElementById("msg-container").innerHTML = ""; });
+onValue(chatRef, snap => { if(!snap.exists()) container.innerHTML = ""; });
 </script>
 </body>
 </html>
