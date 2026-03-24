@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anon Chat</title>
+
+<style>
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:#111;
+  color:#fff;
+}
+#msg{
+  height:80vh;
+  overflow:auto;
+  padding:5px;
+}
+.me{color:#4fc3f7;}
+.other{color:#fff;}
+#box{display:flex;}
+input{flex:1;padding:8px;font-size:16px;}
+button{padding:8px;background:#4fc3f7;border:none;}
+#status{font-size:12px;color:#aaa;padding:5px;}
+</style>
+</head>
+
+<body>
+
+<div id="msg"></div>
+<div id="status">Connecting...</div>
+
+<div id="box">
+<input id="input" placeholder="message...">
+<button onclick="send()">Send</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getDatabase, ref, push, onChildAdded, update, set, onValue, onDisconnect } 
+from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
+
+//   Firebase config (already correct)
+const firebaseConfig = {
+  apiKey: "AIzaSyDqjbhRTpFgwRtZrqCG-ckO-UM_uZqh2Rc",
+  authDomain: "srizwanchat.firebaseapp.com",
+  projectId: "srizwanchat",
+  storageBucket: "srizwanchat.firebasestorage.app",
+  messagingSenderId: "101112162367",
+  appId: "1:101112162367:web:5d33f592297f4f9967b08a",
+  measurementId: "G-8XHB9HQTMR"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const chatRef = ref(db, "chat");
+const onlineRef = ref(db, "online");
+const typingRef = ref(db, "typing");
+
+// user
+const user = "User" + Math.floor(Math.random()*9999);
+
+// online system
+set(ref(db, "online/" + user), true);
+onDisconnect(ref(db, "online/" + user)).remove();
+
+onValue(onlineRef, snap=>{
+  document.getElementById("status").innerText =
+    snap.size + " online";
+});
+
+// send message
+window.send = function(){
+  let input = document.getElementById("input");
+  let text = input.value.trim();
+  if(!text) return;
+
+  push(chatRef, {
+    name:user,
+    msg:text,
+    seen:false,
+    time:Date.now()
+  });
+
+  input.value="";
+};
+
+// typing
+document.getElementById("input").addEventListener("input", ()=>{
+  set(typingRef, user + " typing...");
+  setTimeout(()=>set(typingRef, ""),1000);
+});
+
+onValue(typingRef, snap=>{
+  if(snap.val()){
+    document.getElementById("status").innerText = snap.val();
+  }
+});
+
+// receive message
+onChildAdded(chatRef, snap=>{
+  let d = snap.val();
+  let div = document.createElement("div");
+
+  div.className = (d.name==user) ? "me" : "other";
+
+  div.innerHTML = "<b>"+d.name+":</b> " + d.msg;
+
+  document.getElementById("msg").appendChild(div);
+  window.scrollTo(0,99999);
+
+  // seen update
+  if(d.name !== user){
+    update(snap.ref, {seen:true});
+  }
+});
+</script>
+
+</body>
+</html>
