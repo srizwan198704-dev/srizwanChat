@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>ব্যক্তিগত চ্যাট</title>
+<title>S2izwan</title>
 
 <link href="https://fonts.maateen.me/solaiman-lipi/font.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -31,7 +31,6 @@ body {
   color: var(--text-main);
   display: flex;
   flex-direction: column;
-  /* আধুনিক ব্রাউজারের জন্য ডাইনামিক হাইট */
   height: 100vh;
   height: -webkit-fill-available;
 }
@@ -43,7 +42,7 @@ body {
   padding: 10px 15px;
   background: rgba(255,255,255,0.05);
   border-bottom: 1px solid #222;
-  flex-shrink: 0; /* হেডার যেন ছোট না হয়ে যায় */
+  flex-shrink: 0;
 }
 
 #status {
@@ -60,6 +59,7 @@ body {
   border: none;
   display: flex;
   align-items: center;
+  outline: none;
 }
 
 #msg-container {
@@ -69,8 +69,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  /* কীবোর্ড আসলে স্ক্রল স্মুথ রাখার জন্য */
   -webkit-overflow-scrolling: touch;
+}
+
+/* মেসেজ সেন্ড করার অ্যানিমেশন */
+@keyframes slideInUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .message {
@@ -80,6 +85,10 @@ body {
   font-size: 17px;
   word-wrap: break-word;
   line-height: 1.5;
+  position: relative;
+  /* অ্যানিমেশন যোগ করা হলো */
+  animation: slideInUp 0.3s ease-out;
+  will-change: transform, opacity;
 }
 
 .me { align-self: flex-end; background: var(--my-msg); color: #000; border-bottom-right-radius: 2px;}
@@ -119,10 +128,23 @@ body {
   align-items: center;
   justify-content: center;
   min-width: 45px;
+  position: relative;
 }
 
 .material-icons { font-size: 30px; }
-.emoji-btn { font-size: 28px; }
+
+/* রিয়াকশন বাটন এনিমেশন */
+.emoji-btn {
+  font-size: 28px;
+  transition: transform 0.1s linear; /* স্মুথ গ্রোইংয়ের জন্য */
+  display: inline-block;
+  will-change: transform;
+}
+
+/* লং প্রেস করলে বাটন বড় হবে (CSS ক্লাস) */
+.emoji-btn.growing {
+  transform: scale(2.5); /* কতটুকু বড় হবে */
+}
 
 #msg-container::-webkit-scrollbar { width: 3px; }
 #msg-container::-webkit-scrollbar-thumb { background: #333; }
@@ -144,7 +166,7 @@ body {
 <div id="input-box">
   <input id="input" placeholder="বার্তা লিখুন..." autocomplete="off">
   <button id="action-btn">
-    <span class="emoji-btn">💋</span>
+    <span class="emoji-btn" id="emoji-icon">💋</span>
   </button>
 </div>
 
@@ -153,6 +175,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/fireba
 import { getDatabase, ref, push, onChildAdded, set, onValue, onDisconnect, remove } 
 from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
+// Firebase কনফিগ (আপনার আগেরটাই রাখা হয়েছে)
 const firebaseConfig = {
   apiKey: "AIzaSyDqjbhRTpFgwRtZrqCG-ckO-UM_uZqh2Rc",
   authDomain: "srizwanchat.firebaseapp.com",
@@ -184,9 +207,10 @@ onValue(onlineRef, snap => {
 
 const input = document.getElementById("input");
 const btn = document.getElementById("action-btn");
+const emojiIcon = document.getElementById("emoji-icon");
 const container = document.getElementById("msg-container");
 
-// কীবোর্ড ফিক্স করার মূল লজিক
+// কীবোর্ড ফিক্স
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', () => {
     document.body.style.height = window.visualViewport.height + 'px';
@@ -195,63 +219,85 @@ if (window.visualViewport) {
 }
 
 input.addEventListener("input", () => {
-  btn.innerHTML = input.value.trim() !== "" ? '<span class="material-icons">send</span>' : '<span class="emoji-btn">💋</span>';
+  btn.innerHTML = input.value.trim() !== "" ? '<span class="material-icons">send</span>' : '<span class="emoji-btn" id="emoji-icon">💋</span>';
 });
 
 let pressTimer;
 let isLongPress = false;
 let isActionFired = false;
+const LONG_PRESS_TIME = 700; // কতক্ষণ চেপে ধরলে বড় হবে (মিলিসেকেন্ড)
 
 const handleStart = (e) => {
-  if (e.type === 'touchstart' && e.cancelable) e.preventDefault(); 
-  isActionFired = false;
+  // শুধু ইমোজি মোডে লং প্রেস কাজ করবে
   if(input.value.trim() !== "") return;
   
+  if (e.type === 'touchstart' && e.cancelable) e.preventDefault(); 
+  isActionFired = false;
   isLongPress = false;
+
+  // CSS ক্লাস যোগ করে এনিমেশন শুরু (বড় হওয়া)
+  const targetEmoji = document.getElementById("emoji-icon");
+  if(targetEmoji) targetEmoji.classList.add("growing");
+
   pressTimer = setTimeout(() => {
     isLongPress = true;
     isActionFired = true;
-    sendMsg("💋", true);
-  }, 700);
+    sendMsg("💋", true); // বড় ইমোজি পাঠাবে
+    
+    // পাঠানোর পর ক্লাস রিমুভ (ছোট করা)
+    if(targetEmoji) targetEmoji.classList.remove("growing");
+  }, LONG_PRESS_TIME);
 };
 
 const handleEnd = (e) => {
-  if (e.type === 'touchend' && e.cancelable) e.preventDefault();
+  if(input.value.trim() === "") {
+    if (e.type === 'touchend' && e.cancelable) e.preventDefault();
+  }
+  
   clearTimeout(pressTimer);
   
-  if (isActionFired) return;
+  // বাটন ছেড়ে দিলে এনিমেশন ক্লাস রিমুভ
+  const targetEmoji = document.getElementById("emoji-icon");
+  if(targetEmoji) targetEmoji.classList.remove("growing");
+
+  if (isActionFired) return; // লং প্রেস ফায়ার হয়ে গেলে আর কিছু করবে না
 
   const text = input.value.trim();
   if (text !== "") {
     sendMsg(text, false);
-  } else if (!isLongPress) {
+  } else if (!isLongPress && e.target.closest('#action-btn')) {
+    // শুধু ক্লিক করলে ছোট ইমোজি
     sendMsg("💋", false);
   }
   isActionFired = true;
 };
 
+// ইভেন্ট লিসেনার (মোবাইল ও ডেস্কটপ)
 btn.addEventListener('touchstart', handleStart, {passive: false});
 btn.addEventListener('touchend', handleEnd, {passive: false});
 btn.addEventListener('mousedown', handleStart);
 btn.addEventListener('mouseup', handleEnd);
+btn.addEventListener('mouseleave', handleEnd); // মাউস বাটন থেকে সরে গেলে
 
+// ১. কনফার্ম ছাড়া ডিলিট ফিক্স
 window.clearChat = function() {
-  if(confirm("সব মেসেজ মুছে ফেলতে চান?")) remove(chatRef);
+  // confirm() ফাংশনটি সরিয়ে দেওয়া হয়েছে
+  remove(chatRef);
 };
 
 function sendMsg(text, isBig) {
   if(!text.trim()) return;
   push(chatRef, { sender: myId, msg: text, big: isBig, time: Date.now() });
   input.value = "";
-  btn.innerHTML = '<span class="emoji-btn">💋</span>';
-  // মেসেজ পাঠানোর পর অটো নিচে স্ক্রল
+  // বাটন রিসেট
+  btn.innerHTML = '<span class="emoji-btn" id="emoji-icon">💋</span>';
   setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
 }
 
 input.addEventListener("keypress", (e) => { 
     if(e.key === "Enter") {
         sendMsg(input.value.trim(), false); 
-        input.blur(); // মেসেজ পাঠিয়ে কীবোর্ড হাইড করতে চাইলে এটি রাখতে পারেন
+        input.blur(); 
     }
 });
 
@@ -262,7 +308,11 @@ onChildAdded(chatRef, snap => {
   div.className = `message ${isMe ? 'me' : 'other'} ${d.big ? 'big-emoji' : ''}`;
   div.innerHTML = `<div class="text">${d.msg}</div>`;
   container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+  
+  // নতুন মেসেজ আসলে অটো স্ক্রল
+  requestAnimationFrame(() => {
+    container.scrollTop = container.scrollHeight;
+  });
 });
 
 onValue(chatRef, snap => { if(!snap.exists()) container.innerHTML = ""; });
