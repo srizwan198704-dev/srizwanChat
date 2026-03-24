@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ব্যক্তিগত চ্যাট</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.maateen.me/solaiman-lipi/font.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
 <style>
@@ -15,26 +15,44 @@
   --other-msg: #333;
   --text-main: #fff;
   --accent: #aaa;
+  --font-main: 'SolaimanLipi', sans-serif;
 }
 
 body {
   margin: 0;
-  font-family: 'Hind Siliguri', sans-serif;
+  font-family: var(--font-main);
   background-color: var(--bg-color);
   color: var(--text-main);
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh; /* কীবোর্ড অনুযায়ী হাইট এডজাস্ট করবে */
+  height: 100dvh;
   overflow: hidden;
 }
 
-#status {
-  font-size: 13px;
-  color: var(--accent);
-  padding: 10px;
-  text-align: center;
+#header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 15px;
   background: rgba(255,255,255,0.05);
+  border-bottom: 1px solid #222;
+}
+
+#status {
+  font-size: 14px;
+  color: var(--accent);
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-main);
+}
+
+.delete-btn {
+  color: #ff5252;
+  cursor: pointer;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
 }
 
 #msg-container {
@@ -50,34 +68,20 @@ body {
   max-width: 75%;
   padding: 10px 14px;
   border-radius: 18px;
-  font-size: 16px;
+  font-size: 17px;
   word-wrap: break-word;
-  line-height: 1.4;
+  font-family: var(--font-main);
+  line-height: 1.5;
 }
 
-.me { 
-  align-self: flex-end; 
-  background: var(--my-msg); 
-  color: #000; 
-  border-bottom-right-radius: 2px;
-}
+.me { align-self: flex-end; background: var(--my-msg); color: #000; border-bottom-right-radius: 2px;}
+.other { align-self: flex-start; background: var(--other-msg); color: #fff; border-bottom-left-radius: 2px;}
 
-.other { 
-  align-self: flex-start; 
-  background: var(--other-msg); 
-  color: #fff; 
-  border-bottom-left-radius: 2px;
-}
-
-.big-emoji { 
-  font-size: 65px; 
-  background: transparent !important; 
-  padding: 0 !important; 
-}
+.big-emoji { font-size: 65px; background: transparent !important; padding: 0 !important; }
 
 #input-box {
   display: flex;
-  padding: 12px 15px 25px 15px; /* নিচের দিকে কিছুটা জায়গা বাড়ানো হয়েছে */
+  padding: 12px 15px 25px 15px;
   background: #111;
   align-items: center;
   gap: 10px;
@@ -93,7 +97,7 @@ body {
   color: #fff;
   outline: none;
   font-size: 16px;
-  font-family: inherit;
+  font-family: var(--font-main);
 }
 
 #action-btn {
@@ -109,10 +113,9 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-.material-icons { font-size: 32px; }
-.emoji-btn { font-size: 30px; }
+.material-icons { font-size: 30px; }
+.emoji-btn { font-size: 28px; }
 
-/* স্ক্রলবার হাইড বা স্টাইল */
 #msg-container::-webkit-scrollbar { width: 3px; }
 #msg-container::-webkit-scrollbar-thumb { background: #333; }
 </style>
@@ -120,23 +123,26 @@ body {
 
 <body>
 
-<div id="status">সংযোগ করা হচ্ছে...</div>
+<div id="header">
+  <div style="width: 40px;"></div>
+  <div id="status">সংযোগ করা হচ্ছে...</div>
+  <button class="delete-btn" onclick="clearChat()">
+    <span class="material-icons">delete_sweep</span>
+  </button>
+</div>
+
 <div id="msg-container"></div>
 
 <div id="input-box">
   <input id="input" placeholder="বার্তা লিখুন..." autocomplete="off">
-  <button id="action-btn" 
-    onmousedown="startPress()" 
-    onmouseup="endPress()" 
-    ontouchstart="startPress()" 
-    ontouchend="endPress()">
+  <button id="action-btn">
     <span class="emoji-btn">💋</span>
   </button>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded, set, onValue, onDisconnect } 
+import { getDatabase, ref, push, onChildAdded, set, onValue, onDisconnect, remove } 
 from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -154,87 +160,89 @@ const db = getDatabase(app);
 const chatRef = ref(db, "chat");
 const onlineRef = ref(db, "online");
 
-// ডিভাইস আইডি সেটআপ
 let myId = localStorage.getItem("chat_user_id") || "U-" + Math.floor(Math.random()*9999);
 localStorage.setItem("chat_user_id", myId);
 
-// অনলাইন স্ট্যাটাস ট্র্যাকিং
+function toBanglaNum(num) {
+  const bNum = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
+  return num.toString().split('').map(d => bNum[d] || d).join('');
+}
+
 set(ref(db, "online/" + myId), true);
 onDisconnect(ref(db, "online/" + myId)).remove();
 onValue(onlineRef, snap => {
-  const count = snap.size || 0;
-  document.getElementById("status").innerText = count + " জন অনলাইনে আছেন";
+  document.getElementById("status").innerText = toBanglaNum(snap.size || 0) + " জন অনলাইনে আছেন";
 });
 
 const input = document.getElementById("input");
 const btn = document.getElementById("action-btn");
 
-// আইকন পরিবর্তন লজিক
 input.addEventListener("input", () => {
-  if (input.value.trim() !== "") {
-    btn.innerHTML = '<span class="material-icons">send</span>';
-  } else {
-    btn.innerHTML = '<span class="emoji-btn">💋</span>';
-  }
+  btn.innerHTML = input.value.trim() !== "" ? '<span class="material-icons">send</span>' : '<span class="emoji-btn">💋</span>';
 });
 
 let pressTimer;
 let isLongPress = false;
+let isActionFired = false;
 
-window.startPress = function() {
+const handleStart = (e) => {
+  if (e.type === 'touchstart') e.preventDefault(); 
+  isActionFired = false;
   if(input.value.trim() !== "") return;
+  
   isLongPress = false;
   pressTimer = setTimeout(() => {
     isLongPress = true;
+    isActionFired = true;
     sendMsg("💋", true);
-  }, 800);
+  }, 700);
 };
 
-window.endPress = function() {
+const handleEnd = (e) => {
+  if (e.type === 'touchend') e.preventDefault();
   clearTimeout(pressTimer);
-  const text = input.value.trim();
   
+  if (isActionFired) return;
+
+  const text = input.value.trim();
   if (text !== "") {
     sendMsg(text, false);
   } else if (!isLongPress) {
     sendMsg("💋", false);
   }
+  isActionFired = true;
+};
+
+btn.addEventListener('touchstart', handleStart, {passive: false});
+btn.addEventListener('touchend', handleEnd, {passive: false});
+btn.addEventListener('mousedown', handleStart);
+btn.addEventListener('mouseup', handleEnd);
+
+window.clearChat = function() {
+  if(confirm("সব মেসেজ মুছে ফেলতে চান?")) remove(chatRef);
 };
 
 function sendMsg(text, isBig) {
-  if(!text) return;
-  push(chatRef, {
-    sender: myId,
-    msg: text,
-    big: isBig,
-    time: Date.now()
-  });
+  if(!text.trim()) return;
+  push(chatRef, { sender: myId, msg: text, big: isBig, time: Date.now() });
   input.value = "";
   btn.innerHTML = '<span class="emoji-btn">💋</span>';
 }
 
-input.addEventListener("keypress", (e) => { 
-  if(e.key === "Enter") sendMsg(input.value.trim(), false); 
-});
+input.addEventListener("keypress", (e) => { if(e.key === "Enter") sendMsg(input.value.trim(), false); });
 
-// মেসেজ রিসিভ এবং ডিসপ্লে
 onChildAdded(chatRef, snap => {
   const d = snap.val();
-  const container = document.getElementById("msg-container");
   const div = document.createElement("div");
   const isMe = d.sender === myId;
-
   div.className = `message ${isMe ? 'me' : 'other'} ${d.big ? 'big-emoji' : ''}`;
   div.innerHTML = `<div class="text">${d.msg}</div>`;
-
+  const container = document.getElementById("msg-container");
   container.appendChild(div);
-  
-  // নতুন মেসেজ আসলে অটো স্ক্রল
-  setTimeout(() => {
-    container.scrollTop = container.scrollHeight;
-  }, 100);
+  container.scrollTop = container.scrollHeight;
 });
-</script>
 
+onValue(chatRef, snap => { if(!snap.exists()) document.getElementById("msg-container").innerHTML = ""; });
+</script>
 </body>
 </html>
