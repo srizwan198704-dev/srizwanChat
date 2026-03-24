@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>S2izwan</title>
+<meta name="theme-color" content="#111">
+<title>S2izwan Chat</title>
+
+<link rel="manifest" href="manifest.json">
 
 <link href="https://fonts.maateen.me/solaiman-lipi/font.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -59,7 +62,6 @@ body {
   border: none;
   display: flex;
   align-items: center;
-  outline: none;
 }
 
 #msg-container {
@@ -125,7 +127,6 @@ body {
   justify-content: center;
   min-width: 45px;
   user-select: none;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .emoji-btn {
@@ -185,15 +186,24 @@ const onlineRef = ref(db, "online");
 let myId = localStorage.getItem("chat_user_id") || "U-" + Math.floor(Math.random()*9999);
 localStorage.setItem("chat_user_id", myId);
 
+// কানেক্টিভিটি চেক
+const connectedRef = ref(db, ".info/connected");
+onValue(connectedRef, (snap) => {
+  if (snap.val() === true) {
+    const presenceRef = ref(db, "online/" + myId);
+    set(presenceRef, true);
+    onDisconnect(presenceRef).remove();
+  }
+});
+
 function toBanglaNum(num) {
   const bNum = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
   return num.toString().split('').map(d => bNum[d] || d).join('');
 }
 
-set(ref(db, "online/" + myId), true);
-onDisconnect(ref(db, "online/" + myId)).remove();
 onValue(onlineRef, snap => {
-  document.getElementById("status").innerText = toBanglaNum(snap.size || 0) + " জন অনলাইনে আছেন";
+  const count = snap.size || 0;
+  document.getElementById("status").innerText = count > 0 ? toBanglaNum(count) + " জন অনলাইনে আছেন" : "কেউ অনলাইনে নেই";
 });
 
 const input = document.getElementById("input");
@@ -207,30 +217,21 @@ if (window.visualViewport) {
   });
 }
 
-// ইনপুট অনুযায়ী বাটন আইকন পরিবর্তন
 input.addEventListener("input", () => {
   const val = input.value.trim();
-  if (val !== "") {
-    btn.innerHTML = '<span class="material-icons">send</span>';
-  } else {
-    btn.innerHTML = '<span class="emoji-btn" id="emoji-icon">💋</span>';
-  }
+  btn.innerHTML = val !== "" ? '<span class="material-icons">send</span>' : '<span class="emoji-btn" id="emoji-icon">💋</span>';
 });
 
 let pressTimer;
 let isLongPress = false;
 let isActionFired = false;
 
-// ক্লিক বা টাচ হ্যান্ডলার
 const handleStart = (e) => {
   isActionFired = false;
   isLongPress = false;
-  
-  // যদি ইনপুট খালি থাকে তবেই লং প্রেস এনিমেশন হবে
   if(input.value.trim() === "") {
     const emoji = document.getElementById("emoji-icon");
     if(emoji) emoji.classList.add("growing");
-
     pressTimer = setTimeout(() => {
       isLongPress = true;
       isActionFired = true;
@@ -244,20 +245,16 @@ const handleEnd = (e) => {
   clearTimeout(pressTimer);
   const emoji = document.getElementById("emoji-icon");
   if(emoji) emoji.classList.remove("growing");
-
   if (isActionFired) return;
-
   const text = input.value.trim();
   if (text !== "") {
     sendMsg(text, false);
-  } else {
-    // ইনপুট খালি থাকলে এবং লং প্রেস না হলে ছোট ইমোজি পাঠাবে
-    if (!isLongPress) sendMsg("💋", false);
+  } else if (!isLongPress) {
+    sendMsg("💋", false);
   }
   isActionFired = true;
 };
 
-// ইভেন্ট লিসেনারগুলো বাটনের ওপর সরাসরি
 btn.addEventListener('mousedown', handleStart);
 btn.addEventListener('mouseup', handleEnd);
 btn.addEventListener('touchstart', (e) => {
@@ -281,9 +278,7 @@ function sendMsg(text, isBig) {
   setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
 }
 
-input.addEventListener("keypress", (e) => { 
-  if(e.key === "Enter") sendMsg(input.value.trim(), false); 
-});
+input.addEventListener("keypress", (e) => { if(e.key === "Enter") sendMsg(input.value.trim(), false); });
 
 onChildAdded(chatRef, snap => {
   const d = snap.val();
@@ -296,6 +291,17 @@ onChildAdded(chatRef, snap => {
 });
 
 onValue(chatRef, snap => { if(!snap.exists()) container.innerHTML = ""; });
+
+// --- Service Worker Registration for PWA ---
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      console.log('Service Worker Registered!');
+    }).catch(err => {
+      console.log('Registration Failed!', err);
+    });
+  });
+}
 </script>
 </body>
 </html>
